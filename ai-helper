@@ -52,7 +52,13 @@ generate_command() {
     local history="$3"
     
     # Create the system prompt
-    local system_prompt="You are a helpful command line assistant. Generate ONLY the exact terminal command needed to accomplish the user's request. Do not include explanations, markdown formatting, or any other text - just the raw command that can be executed directly in a terminal.
+    local system_prompt="You are a helpful command line assistant. Generate the exact terminal command(s) needed to accomplish the user's request. 
+
+Rules:
+- If multiple commands are needed, put each command on a separate line
+- Do not include explanations, markdown formatting, or any other text
+- Only output the raw commands that can be executed directly in a terminal
+- For complex tasks requiring multiple steps, provide all necessary commands in sequence
 
 Context: The user is on macOS (darwin) using zsh shell.
 
@@ -61,7 +67,7 @@ $history
 
 User request: $prompt
 
-Respond with ONLY the command, nothing else."
+Respond with ONLY the command(s), one per line, nothing else."
 
     # Call Ollama API
     local response=$(ollama run "$model" "$system_prompt" 2>/dev/null)
@@ -72,28 +78,114 @@ Respond with ONLY the command, nothing else."
     fi
     
     # Clean up the response - remove any potential markdown or extra formatting
-    echo "$response" | sed 's/```.*//g' | sed 's/`//g' | xargs
+    echo "$response" | sed 's/```.*//g' | sed 's/`//g' | sed '/^[[:space:]]*$/d'
 }
 
-# Function to confirm and execute command
-confirm_and_execute() {
-    local command="$1"
+# Function to parse and handle multiple commands
+parse_and_execute_commands() {
+    local commands_text="$1"
+    local -a commands
     
-    echo -e "${BLUE}Generated command:${NC}"
-    echo -e "${GREEN}$command${NC}"
+    # Split commands into array, handling both newlines and semicolons
+    while IFS= read -r line; do
+        # Skip empty lines
+        if [[ -n "${line// }" ]]; then
+            # Split by semicolon if present
+            if [[ "$line" == *";"* ]]; then
+                local -a split_commands
+                split_commands=(${(s/;/)line})
+                for cmd in "${split_commands[@]}"; do
+                    cmd=$(echo "$cmd" | xargs)  # trim whitespace
+                    if [[ -n "$cmd" ]]; then
+                        commands+=("$cmd")
+                    fi
+                done
+            else
+                commands+=("$line")
+            fi
+        fi
+    done <<< "$commands_text"
+    
+    # If no commands found, return error
+    if [ ${#commands} -eq 0 ]; then
+        echo -e "${RED}Error: No valid commands found${NC}"
+        return 1
+    fi
+    
+    # Display all commands first
+    echo -e "${BLUE}Generated command(s):${NC}"
+    for i in {1..${#commands}}; do
+        echo -e "${GREEN}$i. ${commands[i]}${NC}"
+    done
     echo
     
-    # Ask for confirmation
-    echo -n -e "${YELLOW}Execute this command? [y/N]: ${NC}"
-    read -r response
+    # If only one command, use simple confirmation
+    if [ ${#commands} -eq 1 ]; then
+        echo -n -e "${YELLOW}Execute this command? [y/N]: ${NC}"
+        read -r response
+        
+        case "$response" in
+            [yY]|[yY][eE][sS])
+                echo -e "${GREEN}Executing...${NC}"
+                eval "${commands[1]}"
+                ;;
+            *)
+                echo -e "${YELLOW}Command not executed.${NC}"
+                ;;
+        esac
+        return 0
+    fi
     
-    case "$response" in
-        [yY]|[yY][eE][sS])
-            echo -e "${GREEN}Executing...${NC}"
-            eval "$command"
+    # Multiple commands - offer options
+    echo -e "${YELLOW}Multiple commands detected. Choose an option:${NC}"
+    echo "  [a] Execute all commands in sequence"
+    echo "  [s] Execute commands one by one (with individual confirmation)"
+    echo "  [n] Don't execute any commands"
+    echo
+    echo -n -e "${YELLOW}Your choice [a/s/N]: ${NC}"
+    read -r choice
+    
+    case "$choice" in
+        [aA])
+            echo -e "${GREEN}Executing all commands...${NC}"
+            for i in {1..${#commands}}; do
+                echo -e "${BLUE}Executing command $i: ${commands[i]}${NC}"
+                eval "${commands[i]}"
+                if [ $? -ne 0 ]; then
+                    echo -e "${RED}Command $i failed. Stopping execution.${NC}"
+                    return 1
+                fi
+                echo
+            done
+            ;;
+        [sS])
+            echo -e "${GREEN}Executing commands with individual confirmation...${NC}"
+            for i in {1..${#commands}}; do
+                echo -e "${BLUE}Command $i: ${commands[i]}${NC}"
+                echo -n -e "${YELLOW}Execute this command? [y/N/q]: ${NC}"
+                read -r response
+                
+                case "$response" in
+                    [yY]|[yY][eE][sS])
+                        echo -e "${GREEN}Executing...${NC}"
+                        eval "${commands[i]}"
+                        if [ $? -ne 0 ]; then
+                            echo -e "${RED}Command failed.${NC}"
+                        fi
+                        ;;
+                    [qQ])
+                        echo -e "${YELLOW}Stopping execution.${NC}"
+                        return 0
+                        ;;
+                    *)
+                        echo -e "${YELLOW}Skipping command.${NC}"
+                        ;;
+                esac
+                echo
+            done
             ;;
         *)
-            echo -e "${YELLOW}Command not executed.${NC}"
+            echo -e "${YELLOW}No commands executed.${NC}"
             ;;
     esac
 }
@@ -138,7 +230,7 @@ ai() {
     local history=$(get_command_history)
     
     # Generate command
-    echo -e "${YELLOW}Generating command...${NC}"
+    echo -e "${YELLOW}Generating command(s)...${NC}"
     local generated_command=$(generate_command "$prompt" "$model" "$history")
     
     if [ $? -ne 0 ] || [ -z "$generated_command" ]; then
@@ -146,8 +238,8 @@ ai() {
         return 1
     fi
     
-    # Confirm and execute
-    confirm_and_execute "$generated_command"
+    # Parse and execute commands
+    parse_and_execute_commands "$generated_command"
 }
 
 # Main execution logic
@@ -162,6 +254,7 @@ main() {
         echo -e "${YELLOW}Examples:${NC}"
         echo -e "  $SCRIPT_NAME kill the process using port 8080"
         echo -e "  $SCRIPT_NAME llama3.1 find all .js files modified in last 24 hours"
+        echo -e "  $SCRIPT_NAME create a backup directory and copy all .txt files to it"
         echo -e "  source $SCRIPT_NAME && ai list all docker containers"
         return 1
     fi

@@ -12,6 +12,8 @@ A zsh command line assistant that leverages Ollama and local language models to 
 - ⚡ **Multiple Usage Modes**: Run directly or source for persistent `ai` function
 - 🧠 **Smart Model Detection**: Only treats first argument as model if it exists in Ollama
 - 🛡️ **Robust Error Handling**: Handles missing Ollama, no history, network issues
+- 🔄 **Multi-Command Support**: Generates and executes multiple commands for complex tasks
+- 🎯 **Flexible Execution**: Choose to run all commands, step through individually, or skip
 
 ## Prerequisites
 
@@ -172,6 +174,45 @@ ollama pull llama3.1
 | "compress this directory" | `tar -czf archive.tar.gz .` |
 | "show git log last 5 commits" | `git log --oneline -5` |
 
+### Multi-Command Examples
+
+| Natural Language Request | Generated Commands |
+|--------------------------|-------------------|
+| "create a backup directory and copy all .txt files to it" | `mkdir backup`<br>`cp *.txt backup/` |
+| "install a package and check its version" | `npm install express`<br>`npm list express` |
+| "stop docker containers and clean up" | `docker stop $(docker ps -q)`<br>`docker system prune -f` |
+
+## Multi-Command Execution
+
+When the AI generates multiple commands for complex tasks, you'll see execution options:
+
+```bash
+$ ai create a new directory called test-dir and list its contents
+Using model: llama3.2
+Prompt: create a new directory called test-dir and list its contents
+
+Generating command(s)...
+Generated command(s):
+1. mkdir test-dir
+2. ls -l test-dir
+
+Multiple commands detected. Choose an option:
+  [a] Execute all commands in sequence
+  [s] Execute commands one by one (with individual confirmation)
+  [n] Don't execute any commands
+
+Your choice [a/s/N]:
+```
+
+### Execution Options
+
+- **[a] All commands**: Executes all commands in sequence, stopping if any command fails
+- **[s] Step-by-step**: Shows each command individually and asks for confirmation
+  - `[y]` - Execute this command
+  - `[N]` - Skip this command
+  - `[q]` - Quit and stop executing remaining commands
+- **[n] No execution**: Don't execute any commands (default)
+
 ## Testing
 
 Run the test suite to verify everything is working:
@@ -228,6 +269,7 @@ The tool uses a carefully crafted system prompt optimized for command generation
 - Context about the operating system (macOS/darwin)
 - Recent command history
 - Instructions for clean command output
+- Support for multi-command sequences
 - Safety guidelines
 
 ### Model Selection
@@ -246,14 +288,21 @@ The tool intelligently detects if the first argument is a valid Ollama model:
 - Otherwise, the entire input is treated as the prompt
 - This prevents common words like "list", "show", "find" from being mistaken as models
 
+### Multi-Command Parsing
+
+The tool can handle commands separated by:
+- **Newlines**: Each line is treated as a separate command
+- **Semicolons**: Commands on the same line separated by `;`
+- **Mixed**: Combination of both formats
+
 ### Integration with Other Tools
 
 The AI helper works well with:
-- Git workflows
-- Docker operations
-- File management
-- System administration
-- Development tasks
+- Git workflows (clone, commit, push sequences)
+- Docker operations (build, run, cleanup)
+- File management (create, copy, organize)
+- System administration (install, configure, monitor)
+- Development tasks (setup, test, deploy)
 
 ## Contributing
 

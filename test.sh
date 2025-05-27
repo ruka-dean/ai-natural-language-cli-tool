@@ -80,5 +80,11 @@ echo "To test the full functionality:"
 echo "1. Make sure Ollama is running: ollama serve"
 echo "2. Try a safe command: ./ai-helper list files in current directory"
 echo "3. Or source it: source ./ai-helper && ai list files in current directory"
+echo "4. Test multi-command: ./ai-helper create a test directory and list its contents"
+echo
+echo "Multi-command features:"
+echo "- The tool can generate multiple commands for complex tasks"
+echo "- You can choose to execute all commands, step through individually, or skip"
+echo "- Each command is confirmed before execution for safety"
 echo
 echo "Remember: The tool will always ask for confirmation before executing commands!" 
