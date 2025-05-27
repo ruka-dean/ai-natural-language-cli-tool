@@ -139,10 +139,11 @@ parse_and_execute_commands() {
     # Multiple commands - offer options
     echo -e "${YELLOW}Multiple commands detected. Choose an option:${NC}"
     echo "  [a] Execute all commands in sequence"
+    echo "  [i] Execute all commands with option to skip individual commands"
     echo "  [s] Execute commands one by one (with individual confirmation)"
     echo "  [n] Don't execute any commands"
     echo
-    echo -n -e "${YELLOW}Your choice [a/s/N]: ${NC}"
+    echo -n -e "${YELLOW}Your choice [a/i/s/N]: ${NC}"
     read -r choice
     
     case "$choice" in
@@ -155,6 +156,38 @@ parse_and_execute_commands() {
                     echo -e "${RED}Command $i failed. Stopping execution.${NC}"
                     return 1
                 fi
+                echo
+            done
+            ;;
+        [iI])
+            echo -e "${GREEN}Executing all commands with skip option...${NC}"
+            for i in {1..${#commands}}; do
+                echo -e "${BLUE}Command $i: ${commands[i]}${NC}"
+                echo -n -e "${YELLOW}Execute this command? [Y/n/q]: ${NC}"
+                read -r response
+                
+                case "$response" in
+                    [nN])
+                        echo -e "${YELLOW}Skipping command $i.${NC}"
+                        ;;
+                    [qQ])
+                        echo -e "${YELLOW}Stopping execution.${NC}"
+                        return 0
+                        ;;
+                    *)
+                        echo -e "${GREEN}Executing...${NC}"
+                        eval "${commands[i]}"
+                        if [ $? -ne 0 ]; then
+                            echo -e "${RED}Command $i failed.${NC}"
+                            echo -n -e "${YELLOW}Continue with remaining commands? [y/N]: ${NC}"
+                            read -r continue_response
+                            if [[ ! "$continue_response" =~ ^[yY]$ ]]; then
+                                echo -e "${YELLOW}Stopping execution.${NC}"
+                                return 1
+                            fi
+                        fi
+                        ;;
+                esac
                 echo
             done
             ;;

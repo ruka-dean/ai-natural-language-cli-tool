@@ -85,6 +85,7 @@ echo
 echo "Multi-command features:"
 echo "- The tool can generate multiple commands for complex tasks"
 echo "- You can choose to execute all commands, step through individually, or skip"
+echo "- Interactive mode allows skipping individual commands while executing all"
 echo "- Each command is confirmed before execution for safety"
 echo
 echo "Remember: The tool will always ask for confirmation before executing commands!" 

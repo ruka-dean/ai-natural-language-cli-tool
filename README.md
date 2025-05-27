@@ -14,6 +14,7 @@ A zsh command line assistant that leverages Ollama and local language models to 
 - 🛡️ **Robust Error Handling**: Handles missing Ollama, no history, network issues
 - 🔄 **Multi-Command Support**: Generates and executes multiple commands for complex tasks
 - 🎯 **Flexible Execution**: Choose to run all commands, step through individually, or skip
+- ⏭️ **Interactive Mode**: Execute all commands with option to skip individual ones
 
 ## Prerequisites
 
@@ -198,15 +199,21 @@ Generated command(s):
 
 Multiple commands detected. Choose an option:
   [a] Execute all commands in sequence
+  [i] Execute all commands with option to skip individual commands
   [s] Execute commands one by one (with individual confirmation)
   [n] Don't execute any commands
 
-Your choice [a/s/N]:
+Your choice [a/i/s/N]:
 ```
 
 ### Execution Options
 
 - **[a] All commands**: Executes all commands in sequence, stopping if any command fails
+- **[i] Interactive all**: Executes all commands but asks before each one with option to skip
+  - `[Y]` - Execute this command (default)
+  - `[n]` - Skip this command and continue with the next
+  - `[q]` - Quit and stop executing remaining commands
+  - If a command fails, asks whether to continue with remaining commands
 - **[s] Step-by-step**: Shows each command individually and asks for confirmation
   - `[y]` - Execute this command
   - `[N]` - Skip this command
