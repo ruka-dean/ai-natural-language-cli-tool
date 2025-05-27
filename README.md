@@ -116,9 +116,9 @@ $ ai kill the process using port 8080
 Using model: llama3.2
 Prompt: kill the process using port 8080
 
-Generating command...
-Generated command:
-lsof -ti:8080 | xargs kill -9
+Generating command(s)...
+Generated command(s):
+1. lsof -ti:8080 | xargs kill -9
 
 Execute this command? [y/N]: y
 Executing...
@@ -152,9 +152,9 @@ ollama pull llama3.1
 1. **Context Collection**: Gathers your recent command history (last 10 commands)
 2. **Prompt Engineering**: Creates a specialized prompt for command generation
 3. **AI Generation**: Sends the request to your chosen Ollama model
-4. **Command Parsing**: Cleans and formats the AI response
-5. **User Confirmation**: Shows the command and asks for confirmation
-6. **Safe Execution**: Runs the command only after user approval
+4. **Command Parsing**: Cleans and formats the AI response, separating multiple commands
+5. **User Confirmation**: Shows all commands and asks for execution preference
+6. **Safe Execution**: Runs commands only after user approval with chosen execution mode
 
 ## Safety Features
 
