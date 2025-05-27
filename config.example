@@ -1,0 +1,18 @@
+# AI Command Line Helper - Environment Configuration Example
+# Copy this file to config and modify as needed
+
+# Default Ollama model to use
+# Available models can be listed with: ollama list
+OLLAMA_MODEL=llama3.2
+
+# Alternative models you might want to try:
+# OLLAMA_MODEL=llama3.1
+# OLLAMA_MODEL=codellama
+# OLLAMA_MODEL=mistral
+# OLLAMA_MODEL=llama3.1:70b
+
+# To use this configuration:
+# 1. Copy this file: cp config.example config
+# 2. Edit config with your preferred settings
+# 3. Source it in your shell: source config
+# 4. Or add to your ~/.zshrc: source /path/to/this/config 
