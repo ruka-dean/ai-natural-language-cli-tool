@@ -81,6 +81,19 @@ Respond with ONLY the command(s), one per line, nothing else."
     echo "$response" | sed 's/```.*//g' | sed 's/`//g' | sed '/^[[:space:]]*$/d'
 }
 
+# Function to execute command and add to history
+execute_and_add_to_history() {
+    local command="$1"
+    
+    # Add command to zsh history
+    print -s "$command"
+    
+    # Execute the command
+    eval "$command"
+    
+    return $?
+}
+
 # Function to parse and handle multiple commands
 parse_and_execute_commands() {
     local commands_text="$1"
@@ -127,7 +140,7 @@ parse_and_execute_commands() {
         case "$response" in
             [yY]|[yY][eE][sS])
                 echo -e "${GREEN}Executing...${NC}"
-                eval "${commands[1]}"
+                execute_and_add_to_history "${commands[1]}"
                 ;;
             *)
                 echo -e "${YELLOW}Command not executed.${NC}"
@@ -151,7 +164,7 @@ parse_and_execute_commands() {
             echo -e "${GREEN}Executing all commands...${NC}"
             for i in {1..${#commands}}; do
                 echo -e "${BLUE}Executing command $i: ${commands[i]}${NC}"
-                eval "${commands[i]}"
+                execute_and_add_to_history "${commands[i]}"
                 if [ $? -ne 0 ]; then
                     echo -e "${RED}Command $i failed. Stopping execution.${NC}"
                     return 1
@@ -176,7 +189,7 @@ parse_and_execute_commands() {
                         ;;
                     *)
                         echo -e "${GREEN}Executing...${NC}"
-                        eval "${commands[i]}"
+                        execute_and_add_to_history "${commands[i]}"
                         if [ $? -ne 0 ]; then
                             echo -e "${RED}Command $i failed.${NC}"
                             echo -n -e "${YELLOW}Continue with remaining commands? [y/N]: ${NC}"
@@ -201,7 +214,7 @@ parse_and_execute_commands() {
                 case "$response" in
                     [yY]|[yY][eE][sS])
                         echo -e "${GREEN}Executing...${NC}"
-                        eval "${commands[i]}"
+                        execute_and_add_to_history "${commands[i]}"
                         if [ $? -ne 0 ]; then
                             echo -e "${RED}Command failed.${NC}"
                         fi

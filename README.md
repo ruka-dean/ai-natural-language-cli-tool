@@ -15,6 +15,7 @@ A zsh command line assistant that leverages Ollama and local language models to 
 - 🔄 **Multi-Command Support**: Generates and executes multiple commands for complex tasks
 - 🎯 **Flexible Execution**: Choose to run all commands, step through individually, or skip
 - ⏭️ **Interactive Mode**: Execute all commands with option to skip individual ones
+- 📜 **History Integration**: All executed commands are added to zsh history for easy access
 
 ## Prerequisites
 
@@ -69,7 +70,7 @@ The installer will:
 - Check for Ollama installation
 - Optionally download llama3.2 model
 - Install the script to your PATH
-- Optionally add the `ai` function to your `.zshrc`
+- Optionally add the `ai` function to your `.zshrc` (recommended for full history integration)
 
 ### Manual Installation
 
@@ -219,6 +220,40 @@ Your choice [a/i/s/N]:
   - `[N]` - Skip this command
   - `[q]` - Quit and stop executing remaining commands
 - **[n] No execution**: Don't execute any commands (default)
+
+## History Integration
+
+All commands executed through the AI helper are automatically added to your zsh history, making them easily accessible:
+
+**Note**: History integration works best when the script is sourced (using the `ai` command). When run directly with `./ai-helper`, executed commands may not be added to the parent shell's history due to subprocess limitations.
+
+### Accessing Executed Commands
+
+- **Up Arrow Key**: Navigate through executed commands just like normal terminal commands
+- **History Command**: See all executed commands with `history`
+- **Search History**: Use `Ctrl+R` to search through executed commands
+- **Repeat Commands**: Use `!!` for last command or `!command` to repeat specific commands
+
+### Example Workflow
+
+```bash
+$ ai create backup directory and copy files
+# ... executes: mkdir backup && cp *.txt backup/
+
+$ ↑ (up arrow) 
+$ cp *.txt backup/  # Shows the actual executed command
+
+$ history | tail -5
+ 1234  ai create backup directory and copy files
+ 1235  mkdir backup
+ 1236  cp *.txt backup/
+```
+
+This means you can:
+- Re-run individual commands without re-asking the AI
+- Build upon previously generated commands
+- Learn from the AI's command suggestions
+- Access commands in scripts or other contexts
 
 ## Testing
 
