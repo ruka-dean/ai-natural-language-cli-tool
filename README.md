@@ -15,6 +15,9 @@ A zsh command line assistant that leverages Ollama and local language models to 
 - 🔄 **Multi-Command Support**: Generates and executes multiple commands for complex tasks
 - 🎯 **Flexible Execution**: Choose to run all commands, step through individually, or skip
 - ⏭️ **Interactive Mode**: Execute all commands with option to skip individual ones
+- 📜 **History Integration**: All executed commands are added to zsh history for easy access
+- 🧠 **Output Context**: Recent command outputs are captured and used as context for follow-up requests
+- 🔄 **Conversational Workflow**: Ask follow-up questions about previous command results
 
 ## Prerequisites
 
@@ -69,7 +72,7 @@ The installer will:
 - Check for Ollama installation
 - Optionally download llama3.2 model
 - Install the script to your PATH
-- Optionally add the `ai` function to your `.zshrc`
+- Optionally add the `ai` function to your `.zshrc` (recommended for full history integration)
 
 ### Manual Installation
 
@@ -108,6 +111,7 @@ ai-helper show me the top 10 largest files in /var/log
 ai kill the process using port 8080
 ai llama3.1 find all .js files modified in last 24 hours
 ai show git status and recent commits
+ai clear context  # Clear command output history
 ```
 
 ### Example Session
@@ -150,12 +154,13 @@ ollama pull llama3.1
 
 ## How It Works
 
-1. **Context Collection**: Gathers your recent command history (last 10 commands)
-2. **Prompt Engineering**: Creates a specialized prompt for command generation
-3. **AI Generation**: Sends the request to your chosen Ollama model
+1. **Context Collection**: Gathers your recent command history (last 10 commands) and recent command outputs (last 5 commands)
+2. **Prompt Engineering**: Creates a specialized prompt for command generation including previous outputs
+3. **AI Generation**: Sends the request to your chosen Ollama model with full context
 4. **Command Parsing**: Cleans and formats the AI response, separating multiple commands
 5. **User Confirmation**: Shows all commands and asks for execution preference
 6. **Safe Execution**: Runs commands only after user approval with chosen execution mode
+7. **Output Capture**: Captures command output and stores it for future context
 
 ## Safety Features
 
@@ -219,6 +224,118 @@ Your choice [a/i/s/N]:
   - `[N]` - Skip this command
   - `[q]` - Quit and stop executing remaining commands
 - **[n] No execution**: Don't execute any commands (default)
+
+## History Integration
+
+All commands executed through the AI helper are automatically added to your zsh history, making them easily accessible:
+
+**Note**: History integration works best when the script is sourced (using the `ai` command). When run directly with `./ai-helper`, executed commands may not be added to the parent shell's history due to subprocess limitations.
+
+### Accessing Executed Commands
+
+- **Up Arrow Key**: Navigate through executed commands just like normal terminal commands
+- **History Command**: See all executed commands with `history`
+- **Search History**: Use `Ctrl+R` to search through executed commands
+- **Repeat Commands**: Use `!!` for last command or `!command` to repeat specific commands
+
+### Example Workflow
+
+```bash
+$ ai create backup directory and copy files
+# ... executes: mkdir backup && cp *.txt backup/
+
+$ ↑ (up arrow) 
+$ cp *.txt backup/  # Shows the actual executed command
+
+$ history | tail -5
+ 1234  ai create backup directory and copy files
+ 1235  mkdir backup
+ 1236  cp *.txt backup/
+```
+
+This means you can:
+- Re-run individual commands without re-asking the AI
+- Build upon previously generated commands
+- Learn from the AI's command suggestions
+- Access commands in scripts or other contexts
+
+## Output Context & Conversational Workflow
+
+The AI helper now captures the output of executed commands and uses it as context for follow-up requests. This enables powerful conversational workflows where you can ask questions about previous results.
+
+### How It Works
+
+- **Output Capture**: All command outputs are automatically captured (up to 1000 characters per command)
+- **Context Storage**: Recent command outputs (last 5 commands) are stored and included in AI requests
+- **Intelligent Reference**: The AI can reference specific files, processes, or information from previous outputs
+- **Context Management**: Use `ai clear context` to reset the output history when starting fresh
+
+### Example Conversational Workflows
+
+#### File Analysis Workflow
+```bash
+$ ai list all files in current directory
+# Output: ai-helper, config.example, install.sh, README.md, test.sh
+
+$ ai show details of the README file from the previous output
+# AI knows to use: cat README.md
+
+$ ai count the number of lines in that file
+# AI knows to use: wc -l README.md
+
+$ ai find the largest file from the first listing
+# AI references the original ls output to identify the largest file
+```
+
+#### Process Management Workflow
+```bash
+$ ai show all running python processes
+# Output: Shows PID, command details, etc.
+
+$ ai kill the process with the highest memory usage from that list
+# AI analyzes the previous output to identify the specific PID
+
+$ ai verify that process was terminated
+# AI checks if the process is still running
+```
+
+#### Docker Workflow
+```bash
+$ ai list all docker containers
+# Shows container IDs, names, status, etc.
+
+$ ai stop the container that was created most recently from that list
+# AI identifies the newest container from the previous output
+
+$ ai check the logs of that container before it was stopped
+# AI remembers which container was stopped
+```
+
+#### Git Analysis Workflow
+```bash
+$ ai show git status
+# Shows modified files, branch info, etc.
+
+$ ai add only the modified JavaScript files from that status
+# AI identifies .js files from the git status output
+
+$ ai show the diff for those files before committing
+# AI knows which files were just added
+```
+
+### Context Management
+
+- **Automatic**: Context is maintained across commands in the same session
+- **Limited Storage**: Only the last 5 command outputs are kept to avoid overwhelming the AI
+- **Clear Context**: Use `ai clear context` to start fresh when switching topics
+- **Truncation**: Long outputs (>1000 chars) are automatically truncated
+
+### Benefits
+
+- **Reduced Repetition**: No need to re-specify file names, IDs, or paths
+- **Intelligent Follow-up**: Ask natural follow-up questions about results
+- **Complex Workflows**: Build multi-step processes with contextual awareness
+- **Learning Aid**: See how the AI connects information across commands
 
 ## Testing
 
