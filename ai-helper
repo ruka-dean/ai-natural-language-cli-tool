@@ -6,6 +6,11 @@
 # Default model - can be overridden by environment variable or command line argument
 DEFAULT_MODEL="${OLLAMA_MODEL:-llama3.2}"
 
+# Global arrays to store recent command outputs and commands (for context)
+typeset -ga RECENT_COMMANDS
+typeset -ga RECENT_OUTPUTS
+MAX_CONTEXT_COMMANDS=5
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -45,11 +50,45 @@ get_command_history() {
     fi
 }
 
+# Function to get recent command outputs for context
+get_recent_outputs() {
+    local context=""
+    
+    if [ ${#RECENT_COMMANDS} -eq 0 ]; then
+        echo "No recent command outputs available"
+        return
+    fi
+    
+    context="Recent commands and their outputs:\n"
+    for i in {1..${#RECENT_COMMANDS}}; do
+        local cmd="${RECENT_COMMANDS[i]}"
+        local output="${RECENT_OUTPUTS[i]}"
+        
+        # Limit output length to avoid overwhelming context
+        if [ ${#output} -gt 1000 ]; then
+            output="${output:0:1000}... (output truncated)"
+        fi
+        
+        context+="\nCommand: $cmd\nOutput:\n$output\n"
+        context+="---\n"
+    done
+    
+    echo -e "$context"
+}
+
+# Function to clear recent command outputs (useful for starting fresh)
+clear_context() {
+    RECENT_COMMANDS=()
+    RECENT_OUTPUTS=()
+    echo -e "${GREEN}Command output context cleared.${NC}"
+}
+
 # Function to generate command using Ollama
 generate_command() {
     local prompt="$1"
     local model="$2"
     local history="$3"
+    local recent_outputs="$4"
     
     # Create the system prompt
     local system_prompt="You are a helpful command line assistant. Generate the exact terminal command(s) needed to accomplish the user's request. 
@@ -59,11 +98,14 @@ Rules:
 - Do not include explanations, markdown formatting, or any other text
 - Only output the raw commands that can be executed directly in a terminal
 - For complex tasks requiring multiple steps, provide all necessary commands in sequence
+- You can reference information from recent command outputs to build more precise commands
 
 Context: The user is on macOS (darwin) using zsh shell.
 
 Recent command history for context:
 $history
+
+$recent_outputs
 
 User request: $prompt
 
@@ -84,14 +126,29 @@ Respond with ONLY the command(s), one per line, nothing else."
 # Function to execute command and add to history
 execute_and_add_to_history() {
     local command="$1"
+    local output
+    local exit_code
     
     # Add command to zsh history
     print -s "$command"
     
-    # Execute the command
-    eval "$command"
+    # Execute the command and capture output while still displaying it
+    # Using tee with process substitution to capture output and display simultaneously
+    output=$(eval "$command" 2>&1 | tee /dev/stderr)
+    exit_code=$?
     
-    return $?
+    # Store command and output in global arrays for context
+    RECENT_COMMANDS+=("$command")
+    RECENT_OUTPUTS+=("$output")
+    
+    # Keep only the last MAX_CONTEXT_COMMANDS entries
+    if [ ${#RECENT_COMMANDS} -gt $MAX_CONTEXT_COMMANDS ]; then
+        # Remove the first element (shift array)
+        RECENT_COMMANDS=("${RECENT_COMMANDS[@]:1}")
+        RECENT_OUTPUTS=("${RECENT_OUTPUTS[@]:1}")
+    fi
+    
+    return $exit_code
 }
 
 # Function to parse and handle multiple commands
@@ -263,6 +320,12 @@ ai() {
         return 1
     fi
     
+    # Handle special commands
+    if [[ "$prompt" == "clear context" ]]; then
+        clear_context
+        return 0
+    fi
+    
     # Check ollama availability
     if ! check_ollama; then
         return 1
@@ -275,9 +338,12 @@ ai() {
     # Get command history
     local history=$(get_command_history)
     
+    # Get recent command outputs
+    local recent_outputs=$(get_recent_outputs)
+    
     # Generate command
     echo -e "${YELLOW}Generating command(s)...${NC}"
-    local generated_command=$(generate_command "$prompt" "$model" "$history")
+    local generated_command=$(generate_command "$prompt" "$model" "$history" "$recent_outputs")
     
     if [ $? -ne 0 ] || [ -z "$generated_command" ]; then
         echo -e "${RED}Error: Failed to generate command${NC}"
